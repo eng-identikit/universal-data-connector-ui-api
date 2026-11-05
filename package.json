@@ -1,0 +1,31 @@
+{
+  "name": "universal-data-connector-ui-api",
+  "version": "1.0.0",
+  "description": "Backend for frontend of the Universal Data Connector UI: catalog of UDC instances, flow view and authenticated proxy",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon -r dotenv/config index.js",
+    "test": "node tests/test-api.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3",
+    "jsonwebtoken": "^9.0.3",
+    "keycloak-connect": "^26.1.1",
+    "morgan": "^1.12.1",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "passport-local": "^1.0.0",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
