@@ -15,6 +15,13 @@ function normalizeUrl(url, field = 'url') {
   return parsed.toString().replace(/\/+$/, '');
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Throws 404 for ids that cannot exist (instead of a database type error). */
+function checkId(id) {
+  if (!UUID.test(String(id))) throw httpError(404, `UDC '${id}' not found`);
+}
+
 function toUdc(row) {
   return {
     id: row.id,
@@ -49,6 +56,7 @@ const Udc = {
   },
 
   async get(id) {
+    checkId(id);
     const { rows } = await pool.query('SELECT * FROM udcs WHERE id = $1', [id]);
     if (!rows.length) throw httpError(404, `UDC '${id}' not found`);
     return toUdc(rows[0]);
@@ -56,6 +64,7 @@ const Udc = {
 
   /** Record plus its decrypted service key, for calls to the instance. */
   async withKey(id) {
+    checkId(id);
     const { rows } = await pool.query('SELECT * FROM udcs WHERE id = $1', [id]);
     if (!rows.length) throw httpError(404, `UDC '${id}' not found`);
     return { ...toUdc(rows[0]), apiKey: decrypt(rows[0].api_key_enc) };
@@ -74,6 +83,7 @@ const Udc = {
   },
 
   async update(id, { name, description, url, publicUrl, apiKey, color, position }) {
+    checkId(id);
     const sets = [];
     const params = [id];
     const set = (column, value) => { params.push(value); sets.push(`${column} = $${params.length}`); };
@@ -94,6 +104,7 @@ const Udc = {
   },
 
   async remove(id) {
+    checkId(id);
     const { rowCount } = await pool.query('DELETE FROM udcs WHERE id = $1', [id]);
     if (!rowCount) throw httpError(404, `UDC '${id}' not found`);
   },

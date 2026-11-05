@@ -7,7 +7,7 @@ Backend for frontend (BFF) della [UI di Universal Data Connector](../universal-d
 - **Catalogo** delle istanze UDC in PostgreSQL, ognuna con il suo URL e una **chiave di servizio** (cifrata a riposo).
 - **Flusso** di un'istanza in una sola chiamata: connettori (sorgenti), subscription su HTTP/MQTT/NATS/WebSocket con il loro transformer, endpoint MCP (destinazioni), libreria dei transformer, tenant e posizione di ogni blocco sulla lavagna.
 - **Blocchi**: aggiunta, modifica e rimozione di sorgenti e destinazioni, con la loro posizione.
-- **Proxy** verso l'API di ogni istanza (`/udc/:id/proxy/...`) con la chiave di servizio, filtrato per ruolo.
+- **Proxy** verso l'API di ogni istanza (`/udc/:id/proxy/...`) e verso il suo stream in tempo reale, con la chiave di servizio, filtrato per ruolo.
 - **Login**: utenti locali, oppure Keycloak quando `KEYCLOAK_URL` è impostato (bearer-only, come in iotagent-ui-bff).
 
 L'alberatura segue [iotagent-ui-bff](https://github.com/Engineering-Research-and-Development/iotagent-ui/tree/main/iotagent-ui-bff).
@@ -40,20 +40,21 @@ Il servizio parla con ogni istanza tramite una **chiave di servizio**: una API k
 - `apiKey`: una chiave di servizio creata sull'UDC (`POST /api/v1/service-keys` da superadmin, oppure `BROKER_SERVICE_KEY` nel suo ambiente);
 - oppure `username` + `password` di un superadmin dell'UDC: usati una volta per creare la chiave di servizio, mai salvati.
 
-La chiave viene verificata prima di salvare l'istanza (`force: true` la salva comunque).
+La chiave viene verificata prima di salvare l'istanza (`force: true` la salva comunque). `PATCH /auth/udc/:id` la sostituisce allo stesso modo: una nuova `apiKey`, oppure `username` + `password` per crearne una.
 
 ## API (`/api/v1`)
 
 | | Endpoint |
 |---|---|
 | Pubbliche | `GET /basic/config` (login locale o Keycloak), `GET /basic/health`, `POST /basic/login`, `POST /basic/refresh` |
-| Profilo | `GET /auth/me`, `POST /auth/me/password` |
+| Profilo | `GET /auth/me`, `POST /auth/me/password` (restituisce una nuova coppia di token) |
 | Utenti (admin, login locale) | `GET`/`POST /auth/users`, `PATCH`/`DELETE /auth/users/:id` |
 | Catalogo | `GET /auth/udc` (con stato in tempo reale), `POST /auth/udc` (admin), `GET /auth/udc/:id`, `PATCH /auth/udc/:id` (posizione: operator; il resto: admin), `DELETE /auth/udc/:id` (admin) |
 | Flusso | `GET /auth/udc/:id/flow`, `PUT /auth/udc/:id/layout` (`{ "<nodeKey>": { x, y } \| null }`) |
 | Sorgenti | `POST /auth/udc/:id/sources` (`{ source, position? }`), `PUT`/`DELETE /auth/udc/:id/sources/:sourceId` |
 | Destinazioni | `POST /auth/udc/:id/sinks` (`{ tenant, subscription, position? }`), `PATCH`/`DELETE /auth/udc/:id/sinks/:tenant/:subscriptionId` |
 | Proxy | `ALL /auth/udc/:id/proxy/<path>` → `<udc>/api/v1/<path>`; `X-Tenant` viene inoltrato |
+| Stream in tempo reale | WebSocket `/auth/udc/:id/stream?access_token=<token della UI>&tenant=<id>` → `/api/v1/stream` dell'istanza con la chiave di servizio |
 
 Errori: `{ "error": { "message", "details"? } }`. Chiavi dei nodi nel layout: `source:<id>`, `sink:subscription:<tenant>:<id>`, `sink:mcp`.
 
@@ -84,7 +85,7 @@ middlewares/               keycloak, extractToken, checkRole, requireRole
 models/                    User, Udc (catalogo), Layout (posizioni dei blocchi)
 routes/basic_routes/       pubbliche: config, health, login, refresh
 routes/secure_routes/      autenticate: profilo, utenti, catalogo UDC, flusso, blocchi, proxy
-services/                  udcClient (chiamate con la chiave di servizio), flow, secrets (cifratura, mascheramento)
+services/                  udcClient (chiamate con la chiave di servizio), flow, streamProxy, secrets (cifratura, mascheramento)
 seed.js                    primo admin e UDC predefinito
 tests/test-api.js          test d'integrazione contro un UDC reale
 ```
@@ -92,7 +93,7 @@ tests/test-api.js          test d'integrazione contro un UDC reale
 ## Test
 
 ```bash
-UDC_TEST_URL=http://localhost:8080 UDC_TEST_ADMIN_PASSWORD=<password dell'admin UDC> npm test
+UDC_TEST_URL=http://localhost:3000 UDC_TEST_ADMIN_PASSWORD=<password dell'admin UDC> npm test
 ```
 
 Gira contro un UDC reale (lo stack Compose) in un database usa e getta, e rimuove ciò che ha creato.

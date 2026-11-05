@@ -5,6 +5,7 @@ const config = require('./config');
 const { ensureDatabase, migrate } = require('./db');
 const seed = require('./seed');
 const { getKeycloak } = require('./middlewares/keycloak');
+const streamProxy = require('./services/streamProxy');
 
 /**
  * universal-data-connector-ui-api: backend for frontend of the UDC UI.
@@ -52,6 +53,7 @@ async function start() {
       console.log(`UDC UI API listening on port ${config.port} (${keycloak ? 'Keycloak' : 'local'} login)`);
       resolve(server);
     });
+    streamProxy.attach(server);
   });
 }
 

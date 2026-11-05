@@ -80,10 +80,13 @@ async function buildFlow(udc, { mask = false } = {}) {
     type: s.type,
     enabled: s.enabled !== false,
     tenant: s.tenant || 'default',
+    tags: s.tags || [],
     entityIdPrefix: s.entityIdPrefix || null,
     status: s.enabled === false ? 'disabled' : (s.runtime?.status || 'unknown'),
     stats: s.runtime?.stats || null,
     lastActivity: s.runtime?.lastActivity || null,
+    // Cluster: the replica running the connector
+    instance: s.runtime?.instance || null,
     config: mask ? maskSecrets(s.config || {}) : (s.config || {})
   }));
   base.sinks = perTenant.flat().map(sub => ({

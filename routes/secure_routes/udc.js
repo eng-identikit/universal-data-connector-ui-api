@@ -57,7 +57,13 @@ router.patch('/:id', requireRole('operator'), handle(async (req, res) => {
   const body = req.body || {};
   const onlyPosition = Object.keys(body).every(k => k === 'position');
   if (!onlyPosition && RANK[req.user.role] < RANK.admin) throw httpError(403, "Role 'admin' required");
-  res.json(await Udc.update(req.params.id, body));
+  const { username, password, ...changes } = body;
+  // New service key from a superadmin's credentials (used once, not stored)
+  if (username && password) {
+    const current = await Udc.get(req.params.id);
+    changes.apiKey = await udcClient.mintServiceKey(changes.url ? Udc.normalizeUrl(changes.url) : current.url, username, password, `udc-ui-api (${req.user.username})`);
+  }
+  res.json(await Udc.update(req.params.id, changes));
 }));
 
 router.delete('/:id', requireRole('admin'), handle(async (req, res) => {

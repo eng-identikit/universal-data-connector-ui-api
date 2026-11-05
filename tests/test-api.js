@@ -3,7 +3,7 @@
 /**
  * universal-data-connector-ui-api integration test, against a real UDC.
  *
- *   UDC_TEST_URL             UDC base URL (default http://localhost:8080, the Compose stack)
+ *   UDC_TEST_URL             UDC base URL (default http://localhost:3000, the Compose stack)
  *   UDC_TEST_ADMIN_PASSWORD  password of the UDC superadmin 'admin' (required)
  *   UI_DB_*                  PostgreSQL for this service (default localhost, user udc);
  *                            the test uses a throw-away database and drops it.
@@ -15,7 +15,7 @@ const crypto = require('crypto');
 const { Client } = require('pg');
 
 const RUN = crypto.randomBytes(3).toString('hex');
-const UDC_URL = process.env.UDC_TEST_URL || 'http://localhost:8080';
+const UDC_URL = process.env.UDC_TEST_URL || 'http://localhost:3000';
 const UDC_PASSWORD = process.env.UDC_TEST_ADMIN_PASSWORD;
 const ADMIN_PASSWORD = 'ui-admin-pass-123';
 const TENANT = `uiapi-${RUN}`;
@@ -178,6 +178,20 @@ async function main() {
     expect(await call(viewer, 'GET', `/auth/udc/${udcId}/proxy/users`), 403);
   });
 
+  await test('realtime stream through the UI API: UI token in, service key to the UDC', async () => {
+    const wsBase = base.replace(/^http/, 'ws');
+    const open = (token) => new Promise((resolve) => {
+      const ws = new WebSocket(`${wsBase}/auth/udc/${udcId}/stream?access_token=${token}&tenant=${TENANT}`);
+      const timer = setTimeout(() => { ws.close(); resolve({ error: 'timeout' }); }, 5000);
+      ws.onmessage = (e) => { clearTimeout(timer); ws.close(); resolve(JSON.parse(e.data)); };
+      ws.onerror = () => { clearTimeout(timer); resolve({ error: 'refused' }); };
+    });
+    const welcome = await open(viewer);
+    assert.strictEqual(welcome.type, 'welcome', JSON.stringify(welcome));
+    assert.strictEqual(welcome.tenant, TENANT);
+    assert.strictEqual((await open('not-a-token')).error, 'refused');
+  });
+
   await test('proxy: reads with X-Tenant, edits with roles, never the auth endpoints', async () => {
     const list = expect(await call(viewer, 'GET', `/auth/udc/${udcId}/proxy/subscriptions`, undefined, { 'X-Tenant': TENANT }), 200);
     assert.strictEqual(list.subscriptions.length, 1);
@@ -197,7 +211,13 @@ async function main() {
   await test('removing blocks removes them from the UDC and the layout', async () => {
     expect(await call(operator, 'DELETE', `/auth/udc/${udcId}/sinks/${TENANT}/${sinkId}`), 204);
     expect(await call(operator, 'DELETE', `/auth/udc/${udcId}/sources/mqtt-${RUN}`), 204);
-    const flow = expect(await call(operator, 'GET', `/auth/udc/${udcId}/flow`), 200);
+    // In cluster mode the other replicas see the change once ConfigSync has propagated it
+    let flow;
+    const started = Date.now();
+    do {
+      flow = expect(await call(operator, 'GET', `/auth/udc/${udcId}/flow`), 200);
+    } while (flow.sources.some(s => s.id === `mqtt-${RUN}`) && Date.now() - started < 5000 && await new Promise(r => setTimeout(r, 100, true)));
+    if (Date.now() - started > 150) console.log(`    (source gone on every replica after ${Date.now() - started} ms)`);
     assert.ok(!flow.sources.some(s => s.id === `mqtt-${RUN}`));
     assert.ok(!flow.layout[`source:mqtt-${RUN}`]);
   });

@@ -7,7 +7,7 @@ Backend for frontend (BFF) of the [Universal Data Connector UI](../universal-dat
 - **Catalog** of UDC instances in PostgreSQL, each with its URL and a **service key** (encrypted at rest).
 - **Flow** of an instance in one call: connectors (sources), subscriptions over HTTP/MQTT/NATS/WebSocket with their transformer, the MCP endpoint (sinks), the transformer library, the tenants and the position of every block on the board.
 - **Blocks**: add, change and remove sources and sinks; their position is saved with them.
-- **Proxy** to each instance's API (`/udc/:id/proxy/...`) with the service key, filtered by role.
+- **Proxy** to each instance's API (`/udc/:id/proxy/...`) and to its realtime stream, with the service key, filtered by role.
 - **Login**: local users, or Keycloak when `KEYCLOAK_URL` is set (bearer-only, as in iotagent-ui-bff).
 
 Its structure follows [iotagent-ui-bff](https://github.com/Engineering-Research-and-Development/iotagent-ui/tree/main/iotagent-ui-bff).
@@ -40,20 +40,21 @@ The service talks to each instance with a **service key**: an API key that is no
 - `apiKey`: a service key created on the UDC (`POST /api/v1/service-keys` as a superadmin, or `BROKER_SERVICE_KEY` in its environment);
 - `username` + `password` of a UDC superadmin: used once to create a service key, never stored.
 
-The key is checked before the instance is saved (`force: true` saves it anyway).
+The key is checked before the instance is saved (`force: true` saves it anyway). `PATCH /auth/udc/:id` replaces it the same way: a new `apiKey`, or `username` + `password` to mint one.
 
 ## API (`/api/v1`)
 
 | | Endpoint |
 |---|---|
 | Public | `GET /basic/config` (local or Keycloak login), `GET /basic/health`, `POST /basic/login`, `POST /basic/refresh` |
-| Profile | `GET /auth/me`, `POST /auth/me/password` |
+| Profile | `GET /auth/me`, `POST /auth/me/password` (returns a new token pair) |
 | Users (admin, local login) | `GET`/`POST /auth/users`, `PATCH`/`DELETE /auth/users/:id` |
 | Catalog | `GET /auth/udc` (with live status), `POST /auth/udc` (admin), `GET /auth/udc/:id`, `PATCH /auth/udc/:id` (position: operator; the rest: admin), `DELETE /auth/udc/:id` (admin) |
 | Flow | `GET /auth/udc/:id/flow`, `PUT /auth/udc/:id/layout` (`{ "<nodeKey>": { x, y } \| null }`) |
 | Sources | `POST /auth/udc/:id/sources` (`{ source, position? }`), `PUT`/`DELETE /auth/udc/:id/sources/:sourceId` |
 | Sinks | `POST /auth/udc/:id/sinks` (`{ tenant, subscription, position? }`), `PATCH`/`DELETE /auth/udc/:id/sinks/:tenant/:subscriptionId` |
 | Proxy | `ALL /auth/udc/:id/proxy/<path>` → `<udc>/api/v1/<path>`; `X-Tenant` is passed through |
+| Realtime stream | WebSocket `/auth/udc/:id/stream?access_token=<UI token>&tenant=<id>` → the instance's `/api/v1/stream` with the service key |
 
 Errors: `{ "error": { "message", "details"? } }`. Node keys of the layout: `source:<id>`, `sink:subscription:<tenant>:<id>`, `sink:mcp`.
 
@@ -84,7 +85,7 @@ middlewares/               keycloak, extractToken, checkRole, requireRole
 models/                    User, Udc (catalog), Layout (block positions)
 routes/basic_routes/       public: config, health, login, refresh
 routes/secure_routes/      authenticated: profile, users, UDC catalog, flow, blocks, proxy
-services/                  udcClient (calls with the service key), flow, secrets (encryption, masking)
+services/                  udcClient (calls with the service key), flow, streamProxy, secrets (encryption, masking)
 seed.js                    first admin and default UDC
 tests/test-api.js          integration test against a real UDC
 ```
@@ -92,7 +93,7 @@ tests/test-api.js          integration test against a real UDC
 ## Tests
 
 ```bash
-UDC_TEST_URL=http://localhost:8080 UDC_TEST_ADMIN_PASSWORD=<UDC admin password> npm test
+UDC_TEST_URL=http://localhost:3000 UDC_TEST_ADMIN_PASSWORD=<UDC admin password> npm test
 ```
 
 It runs against a real UDC (the Compose stack) in a throw-away database, and removes what it created.
