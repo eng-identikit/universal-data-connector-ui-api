@@ -8,9 +8,7 @@ Backend for frontend (BFF) della [UI di Universal Data Connector](../universal-d
 - **Flusso** di un'istanza in una sola chiamata: connettori (sorgenti), subscription su HTTP/MQTT/NATS/WebSocket con il loro transformer, endpoint MCP (destinazioni), libreria dei transformer, tenant e posizione di ogni blocco sulla lavagna.
 - **Blocchi**: aggiunta, modifica e rimozione di sorgenti e destinazioni, con la loro posizione.
 - **Proxy** verso l'API di ogni istanza (`/udc/:id/proxy/...`) e verso il suo stream in tempo reale, con la chiave di servizio, filtrato per ruolo.
-- **Login**: utenti locali, oppure Keycloak quando `KEYCLOAK_URL` è impostato (bearer-only, come in iotagent-ui-bff).
-
-L'alberatura segue [iotagent-ui-bff](https://github.com/Engineering-Research-and-Development/iotagent-ui/tree/main/iotagent-ui-bff).
+- **Login**: utenti locali, oppure Keycloak quando `KEYCLOAK_URL` è impostato (bearer-only).
 
 ## Avvio
 

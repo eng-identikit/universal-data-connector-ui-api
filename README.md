@@ -8,9 +8,7 @@ Backend for frontend (BFF) of the [Universal Data Connector UI](../universal-dat
 - **Flow** of an instance in one call: connectors (sources), subscriptions over HTTP/MQTT/NATS/WebSocket with their transformer, the MCP endpoint (sinks), the transformer library, the tenants and the position of every block on the board.
 - **Blocks**: add, change and remove sources and sinks; their position is saved with them.
 - **Proxy** to each instance's API (`/udc/:id/proxy/...`) and to its realtime stream, with the service key, filtered by role.
-- **Login**: local users, or Keycloak when `KEYCLOAK_URL` is set (bearer-only, as in iotagent-ui-bff).
-
-Its structure follows [iotagent-ui-bff](https://github.com/Engineering-Research-and-Development/iotagent-ui/tree/main/iotagent-ui-bff).
+- **Login**: local users, or Keycloak when `KEYCLOAK_URL` is set (bearer-only).
 
 ## Running
 

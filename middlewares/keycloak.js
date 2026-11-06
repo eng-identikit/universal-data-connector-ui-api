@@ -1,9 +1,9 @@
 const config = require('../config');
 
 /**
- * Keycloak in bearer-only mode, as in iotagent-ui-bff: the SPA logs in on
- * Keycloak and sends its token; this service only validates it. Created only
- * when KEYCLOAK_URL is set.
+ * Keycloak in bearer-only mode: the SPA logs in on Keycloak and sends its
+ * token; this service only validates it. Created only when KEYCLOAK_URL is
+ * set.
  */
 let keycloak = null;
 
