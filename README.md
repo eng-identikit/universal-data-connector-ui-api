@@ -97,3 +97,7 @@ UDC_TEST_URL=http://localhost:3000 UDC_TEST_ADMIN_PASSWORD=<UDC admin password> 
 ```
 
 It runs against a real UDC (the Compose stack) in a throw-away database, and removes what it created.
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).

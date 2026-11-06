@@ -97,3 +97,7 @@ UDC_TEST_URL=http://localhost:3000 UDC_TEST_ADMIN_PASSWORD=<password dell'admin 
 ```
 
 Gira contro un UDC reale (lo stack Compose) in un database usa e getta, e rimuove ciò che ha creato.
+
+## Licenza
+
+Distribuito con licenza [Apache License, Version 2.0](LICENSE).
